@@ -55,6 +55,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // A closed connection stops Claude Code so a dropped request does not keep spending the plan.
   const close = () => { disconnected = true; clearInterval(heartbeat); deadline.abort(new DOMException('Client disconnected', 'AbortError')); };
   res.on('close', close);
+  // The client may have left while the body and guard were read; never start the plan call then.
+  if (res.destroyed) { close(); deadline.dispose(); res.off?.('close', close); await guard.finish('rejected'); return; }
   const fail = async (status: number, error: string) => {
     await guard.finish('failed', requestId, providerStatus);
     if (streaming) { send({ type: 'error', error }); return res.end(); }
