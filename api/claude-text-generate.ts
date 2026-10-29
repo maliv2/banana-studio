@@ -37,7 +37,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const content: ClaudeContent = [];
   for (const part of parts) {
     if (typeof part?.text === 'string' && !part.inlineData && !part.fileData) content.push({ type: 'text', text: part.text });
-    else if (part?.text == null && !part.fileData && ['image/jpeg', 'image/png', 'image/webp'].includes(part?.inlineData?.mimeType)
+    else if (part && part.text == null && !part.fileData &&['image/jpeg', 'image/png', 'image/webp'].includes(part?.inlineData?.mimeType)
       && typeof part.inlineData.data === 'string' && /^[A-Za-z0-9+/]+={0,2}$/.test(part.inlineData.data)) {
       content.push({ type: 'image', source: { type: 'base64', media_type: part.inlineData.mimeType, data: part.inlineData.data } });
     } else return res.status(400).json({ error: 'This model accepts text and image references. YouTube footage requires Gemini.' });
