@@ -85,7 +85,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
       // Plan usage has no per-request API charge.
       const { error } = await waitForTask(createUserScopedClient(req).from('usage_logs').insert({
-        user_id: user.id, action: usageContext.action, model: OPENROUTER_TEXT_MODEL,
+        user_id: user.id, action: usageContext.action, model: CLAUDE_TEXT_MODEL,
         prompt: usageContext.prompt.slice(0, 500), image_count: 0, estimated_cost: 0,
       }).abortSignal(accounting.signal), accounting.signal);
       usageLogged = !error;
