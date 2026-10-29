@@ -32,10 +32,11 @@ test('the Claude plan is offered only in the desktop runtime with a plan token a
 });
 
 test('Claude Code receives the plan token and a private config, never provider keys', async () => {
-  await withEnv({ ANTHROPIC_API_KEY: 'sk-ant-api03-test-only', OPENROUTER_API_KEY: 'test-only', SUPABASE_SERVICE_ROLE_KEY: 'test-only', CLAUDE_CONFIG_DIR: '/user/config' }, () => {
+  await withEnv({ HTTPS_PROXY: 'http://proxy.test:8080', ANTHROPIC_API_KEY: 'sk-ant-api03-test-only', OPENROUTER_API_KEY: 'test-only', SUPABASE_SERVICE_ROLE_KEY: 'test-only', CLAUDE_CONFIG_DIR: '/user/config' }, () => {
     const env = claudeEnvironment('/opt/claude/claude', TOKEN, '/tmp/private');
     assert.equal(env.CLAUDE_CODE_OAUTH_TOKEN, TOKEN);
     assert.equal(env.CLAUDE_CONFIG_DIR, '/tmp/private');
+    assert.equal(env.HTTPS_PROXY, 'http://proxy.test:8080');
     for (const name of ['ANTHROPIC_API_KEY', 'OPENROUTER_API_KEY', 'SUPABASE_SERVICE_ROLE_KEY', 'ANTHROPIC_AUTH_TOKEN']) assert.equal(env[name], undefined, name);
   });
 });

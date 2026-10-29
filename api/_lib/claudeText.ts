@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import { query, type SDKUserMessage } from '@anthropic-ai/claude-agent-sdk';
+import type { SDKUserMessage } from '@anthropic-ai/claude-agent-sdk';
 
 /** Claude Opus 5.5 through the official Claude Agent SDK, billed to the desktop
  * user's own Claude plan with the OAuth token from `claude setup-token`.
@@ -98,6 +98,8 @@ export async function requestClaudeText(input: ClaudeTextRequest, signal?: Abort
   }
   let stderr = '';
   try {
+    // Loaded on first use so hosted routes that only check availability never pull in the SDK.
+    const { query } = await import('@anthropic-ai/claude-agent-sdk');
     for await (const message of query({ prompt: prompt(), options: {
       model: CLAUDE_TEXT_MODEL, effort: input.effort, systemPrompt: input.system,
       tools: [], mcpServers: {}, strictMcpConfig: true, settingSources: [], persistSession: false,
@@ -125,6 +127,8 @@ export async function requestClaudeText(input: ClaudeTextRequest, signal?: Abort
   } finally {
     signal?.removeEventListener('abort', abort);
     controller.abort();
-    fs.rmSync(directory, { recursive: true, force: true });
+    // A locked temp folder must not turn a finished plan call into an error.
+    try { fs.rmSync(directory, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 }); }
+    catch { console.warn('[claude-text] temporary directory could not be removed'); }
   }
 }

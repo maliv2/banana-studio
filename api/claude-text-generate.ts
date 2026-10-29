@@ -42,7 +42,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       content.push({ type: 'image', source: { type: 'base64', media_type: part.inlineData.mimeType, data: part.inlineData.data } });
     } else return res.status(400).json({ error: 'This model accepts text and image references. YouTube footage requires Gemini.' });
   }
-  const guard = await startOpenAIRequest(req, res, user, 'text');
+  const guard = await startOpenAIRequest(req, res, user, 'text', undefined, 'Claude');
   if (!guard) return;
   const streaming = String(req.headers?.accept || req.headers?.Accept || '').includes('application/x-ndjson');
   let disconnected = false;
@@ -51,7 +51,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   let providerStatus: number | undefined;
   let outcome: 'completed' | 'failed' = 'failed';
   const send = (event: unknown) => { if (!disconnected && !res.writableEnded && !res.destroyed) res.write(`${JSON.stringify(event)}\n`); };
-  const close = () => { disconnected = true; clearInterval(heartbeat); };
+  const deadline = createTaskDeadline(250_000);
+  // A closed connection stops Claude Code so a dropped request does not keep spending the plan.
+  const close = () => { disconnected = true; clearInterval(heartbeat); deadline.abort(new DOMException('Client disconnected', 'AbortError')); };
+  res.on('close', close);
   const fail = async (status: number, error: string) => {
     await guard.finish('failed', requestId, providerStatus);
     if (streaming) { send({ type: 'error', error }); return res.end(); }
@@ -59,10 +62,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   };
   if (streaming) {
     res.setHeader('Content-Type', 'application/x-ndjson; charset=utf-8'); res.setHeader('X-Accel-Buffering', 'no');
-    res.on('close', close); send({ type: 'status', stage: 'generating' });
+    send({ type: 'status', stage: 'generating' });
     heartbeat = setInterval(() => send({ type: 'heartbeat' }), 10_000);
   }
-  const deadline = createTaskDeadline(250_000);
   const wardrobe = body.brainstormFormat === 'wardrobe';
   const analysis = body.outputFormat === 'youtube_analysis';
   const format = analysis ? YOUTUBE_ANALYSIS_FORMAT : usageContext.action === 'brainstorm' ? buildBrainstormOutputFormat(wardrobe, body.brainstormCount) : undefined;
