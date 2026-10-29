@@ -19,7 +19,9 @@ export const claudeToken = (): string | undefined => {
 const candidateDirectories = () => {
   const home = os.homedir();
   return [...(process.env.PATH || '').split(path.delimiter), path.join(home, '.local', 'bin'), path.join(home, '.claude', 'local'),
-    ...(process.platform === 'win32' ? [path.join(process.env.LOCALAPPDATA || '', 'Programs', 'claude')]
+    ...(process.platform === 'win32' ? [path.join(process.env.LOCALAPPDATA || '', 'Programs', 'claude'),
+      // Default `npm install -g` prefix on Windows.
+      ...(process.env.APPDATA ? [path.join(process.env.APPDATA, 'npm', 'node_modules', '@anthropic-ai', 'claude-code', 'bin')] : [])]
       : ['/opt/homebrew/bin', '/usr/local/bin', path.join(home, '.npm-global/bin'), path.join(home, '.bun/bin'), path.join(home, '.volta/bin')]),
   ].filter(Boolean);
 };
