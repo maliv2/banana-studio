@@ -103,7 +103,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       let value: any;
       try { value = JSON.parse(text); } catch { /* checked below */ }
       if (typeof value?.videoAvailable !== 'boolean' || typeof value.brief !== 'string' || typeof value.premise !== 'string'
-        || typeof value.limitation !== 'string' || !Array.isArray(value.evidence)) return fail(502, 'Model video analizini beklenen biçimde döndürmedi.');
+        || typeof value.limitation !== 'string' || !Array.isArray(value.evidence)
+        || value.videoAvailable === false || !value.brief.trim() || !value.premise.trim()
+        || !value.evidence.some((item: any) => item?.relevance === 'premise'
+          && typeof item.timestamp === 'string' && typeof item.fact === 'string' && item.fact.trim())) {
+        return fail(502, 'Model video analizini beklenen biçimde döndürmedi.');
+      }
     }
     const result = { text, candidates: null, provider: 'claude', providerModel: CLAUDE_TEXT_MODEL, usageMetadata: { provider: 'claude', claudeUsage: response.usage, usageLogged, usageLoggingPending }, requestId: guard.id };
     outcome = 'completed'; await guard.finish('completed', requestId, providerStatus);
